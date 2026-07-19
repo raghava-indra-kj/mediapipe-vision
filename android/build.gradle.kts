@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.objectbox)
+    id("maven-publish")
 }
 
 group = "com.github.raghava-indra-kj"
@@ -17,6 +18,11 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
+    }
+
+    // Exposes the release variant as a component JitPack (and any other Maven consumer) can publish.
+    publishing {
+        singleVariant("release")
     }
 
     compileOptions {
@@ -52,4 +58,17 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.runner)
+}
+
+// Pins the exact Maven coordinates JitPack (or any Maven consumer) publishes this module under —
+// without this, JitPack would derive a coordinate from the repo/module name instead.
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.raghava-indra-kj"
+            artifactId = "mediapipe-vision"
+            version = "1.0.0"
+            afterEvaluate { from(components["release"]) }
+        }
+    }
 }
