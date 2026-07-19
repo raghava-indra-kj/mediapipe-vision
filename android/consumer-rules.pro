@@ -1,0 +1,2 @@
+-keep class com.github.raghavaindrakj.mediapipevision.storage.EmbeddingRecord { *; }
+-keep class com.github.raghavaindrakj.mediapipevision.storage.EmbeddingRecord_ { *; }

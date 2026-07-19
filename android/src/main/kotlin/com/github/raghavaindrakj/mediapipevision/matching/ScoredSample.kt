@@ -1,0 +1,7 @@
+package com.github.raghavaindrakj.mediapipevision.matching
+
+internal data class ScoredSample(
+    val sampleId: String,
+    val externalId: String,
+    val score: Float
+)
