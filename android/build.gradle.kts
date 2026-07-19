@@ -20,7 +20,6 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
-    // Exposes the release variant as a component JitPack (and any other Maven consumer) can publish.
     publishing {
         singleVariant("release")
     }
@@ -53,15 +52,8 @@ dependencies {
     implementation(libs.mediapipe.tasks.vision)
     implementation(libs.objectbox.android)
     implementation(libs.androidx.exifinterface)
-
-    testImplementation(libs.junit)
-
-    androidTestImplementation(libs.androidx.test.junit)
-    androidTestImplementation(libs.androidx.test.runner)
 }
 
-// Pins the exact Maven coordinates JitPack (or any Maven consumer) publishes this module under —
-// without this, JitPack would derive a coordinate from the repo/module name instead.
 publishing {
     publications {
         register<MavenPublication>("release") {

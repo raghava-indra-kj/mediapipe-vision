@@ -11,7 +11,7 @@ import com.github.raghavaindrakj.mediapipevision.model.EngineStatus
 import com.github.raghavaindrakj.mediapipevision.model.LearnResult
 import com.github.raghavaindrakj.mediapipevision.model.LearnedIdSummary
 import com.github.raghavaindrakj.mediapipevision.model.Match
-import com.github.raghavaindrakj.mediapipevision.model.MediaPipeVisionException
+import com.github.raghavaindrakj.mediapipevision.model.MpvRecognitionException
 import com.github.raghavaindrakj.mediapipevision.storage.ObjectBoxSimilarityIndex
 
 /**
@@ -95,13 +95,13 @@ class MediaPipeVision private constructor(
 
     private fun requireValidImage(image: Bitmap) {
         if (image.isRecycled || image.width <= 0 || image.height <= 0) {
-            throw MediaPipeVisionException.InvalidImage("Image must not be recycled and must have positive dimensions")
+            throw MpvRecognitionException.InvalidImage("Image must not be recycled and must have positive dimensions")
         }
     }
 
     private fun requireValidId(id: String) {
         if (id.isBlank()) {
-            throw MediaPipeVisionException.InvalidId("id must not be blank")
+            throw MpvRecognitionException.InvalidId("id must not be blank")
         }
     }
 }

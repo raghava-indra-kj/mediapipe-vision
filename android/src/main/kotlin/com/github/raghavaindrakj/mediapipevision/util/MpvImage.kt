@@ -14,7 +14,7 @@ import java.io.InputStream
  * file/URI that might carry EXIF rotation (e.g. a camera photo), so the bitmap you pass to
  * `learn`/`recognize` is right-side up.
  */
-object MediaPipeVisionImages {
+object MpvImage {
 
     fun decodeUpright(context: Context, uri: Uri): Bitmap {
         val bitmap = openStream(context, uri)?.use { BitmapFactory.decodeStream(it) }

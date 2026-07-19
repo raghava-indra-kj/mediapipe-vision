@@ -2,7 +2,8 @@ package com.github.raghavaindrakj.mediapipevision.embedding
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.github.raghavaindrakj.mediapipevision.model.MediaPipeVisionException
+import com.github.raghavaindrakj.mediapipevision.model.MpvRecognitionException
+import com.github.raghavaindrakj.mediapipevision.storage.EMBEDDING_DIMENSIONS
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.imageembedder.ImageEmbedder
@@ -22,12 +23,6 @@ internal class MediaPipeEmbeddingExtractor private constructor(
     companion object {
         private const val MODEL_ASSET_NAME = "mobilenet_v3_large.tflite"
 
-        // MobileNetV3-Large's pooled feature layer is fixed at 1280 dimensions by its
-        // architecture. Checked against the model's real output on every extraction (see
-        // requireExpectedDimension) so a model swap that changes this can't silently corrupt
-        // the ObjectBox HNSW index, which is built with the same compile-time constant.
-        const val EXPECTED_EMBEDDING_DIM = 1280
-
         fun create(context: Context): MediaPipeEmbeddingExtractor {
             val embedder = try {
                 val baseOptions = BaseOptions.builder()
@@ -38,13 +33,13 @@ internal class MediaPipeEmbeddingExtractor private constructor(
                     .build()
                 ImageEmbedder.createFromOptions(context, options)
             } catch (e: Exception) {
-                throw MediaPipeVisionException.ModelLoadFailure(e)
+                throw MpvRecognitionException.ModelLoadFailure(e)
             }
             return MediaPipeEmbeddingExtractor(embedder)
         }
     }
 
-    override val embeddingDim: Int = EXPECTED_EMBEDDING_DIM
+    override val embeddingDim: Int = EMBEDDING_DIMENSIONS.toInt()
 
     override suspend fun extract(bitmap: Bitmap): FloatArray = withContext(Dispatchers.Default) {
         val mpImage = BitmapImageBuilder(bitmap).build()
@@ -59,10 +54,10 @@ internal class MediaPipeEmbeddingExtractor private constructor(
     }
 
     private fun requireExpectedDimension(actual: Int) {
-        if (actual != EXPECTED_EMBEDDING_DIM) {
-            throw MediaPipeVisionException.ModelLoadFailure(
+        if (actual != EMBEDDING_DIMENSIONS.toInt()) {
+            throw MpvRecognitionException.ModelLoadFailure(
                 IllegalStateException(
-                    "Embedder produced a $actual-dim vector but the store expects $EXPECTED_EMBEDDING_DIM-dim."
+                    "Embedder produced a $actual-dim vector but the store expects ${EMBEDDING_DIMENSIONS}-dim."
                 )
             )
         }
