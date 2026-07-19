@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.github.raghava-indra-kj"
-version = "1.0.2"
+version = "1.0.3"
 
 android {
     namespace = "com.github.raghavaindrakj.mediapipevision"
@@ -58,8 +58,8 @@ publishing {
     publications {
         register<MavenPublication>("release") {
             groupId = "com.github.raghava-indra-kj"
-            artifactId = "mediapipe-vision"
-            version = "1.0.2"
+            artifactId = "android"
+            version = "1.0.3"
             afterEvaluate { from(components["release"]) }
         }
     }

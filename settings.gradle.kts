@@ -16,5 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "mediapipe-vision"
 
-include(":mediapipe-vision")
-project(":mediapipe-vision").projectDir = file("android")
+include(":android")
