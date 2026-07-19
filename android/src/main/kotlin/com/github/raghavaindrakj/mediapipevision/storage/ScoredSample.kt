@@ -1,4 +1,4 @@
-package com.github.raghavaindrakj.mediapipevision.matching
+package com.github.raghavaindrakj.mediapipevision.storage
 
 internal data class ScoredSample(
     val sampleId: String,

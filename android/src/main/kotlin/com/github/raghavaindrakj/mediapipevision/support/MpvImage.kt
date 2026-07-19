@@ -1,4 +1,4 @@
-package com.github.raghavaindrakj.mediapipevision.util
+package com.github.raghavaindrakj.mediapipevision.support
 
 import android.content.Context
 import android.graphics.Bitmap

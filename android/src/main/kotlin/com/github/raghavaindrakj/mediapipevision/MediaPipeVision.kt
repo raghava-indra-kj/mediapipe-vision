@@ -4,15 +4,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import com.github.raghavaindrakj.mediapipevision.embedding.EmbeddingExtractor
 import com.github.raghavaindrakj.mediapipevision.embedding.MediaPipeEmbeddingExtractor
-import com.github.raghavaindrakj.mediapipevision.internal.IdGenerator
-import com.github.raghavaindrakj.mediapipevision.matching.MatchRanker
-import com.github.raghavaindrakj.mediapipevision.matching.SimilarityIndex
 import com.github.raghavaindrakj.mediapipevision.model.EngineStatus
 import com.github.raghavaindrakj.mediapipevision.model.LearnResult
 import com.github.raghavaindrakj.mediapipevision.model.LearnedIdSummary
 import com.github.raghavaindrakj.mediapipevision.model.Match
 import com.github.raghavaindrakj.mediapipevision.model.MpvRecognitionException
+import com.github.raghavaindrakj.mediapipevision.ranking.MatchRanker
 import com.github.raghavaindrakj.mediapipevision.storage.ObjectBoxSimilarityIndex
+import com.github.raghavaindrakj.mediapipevision.storage.SimilarityIndex
+import com.github.raghavaindrakj.mediapipevision.support.SampleIdGenerator
 
 /**
  * Learns and recognizes items from photos, entirely on-device.
@@ -44,7 +44,7 @@ class MediaPipeVision private constructor(
         requireValidId(id)
 
         val embedding = embeddingExtractor.extract(image)
-        val sampleId = IdGenerator.newSampleId()
+        val sampleId = SampleIdGenerator.newSampleId()
         similarityIndex.add(sampleId, id, displayName, embedding)
 
         val allIds = similarityIndex.listIds()

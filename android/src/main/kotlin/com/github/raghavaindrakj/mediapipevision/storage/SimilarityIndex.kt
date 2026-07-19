@@ -1,4 +1,4 @@
-package com.github.raghavaindrakj.mediapipevision.matching
+package com.github.raghavaindrakj.mediapipevision.storage
 
 import com.github.raghavaindrakj.mediapipevision.model.LearnedIdSummary
 

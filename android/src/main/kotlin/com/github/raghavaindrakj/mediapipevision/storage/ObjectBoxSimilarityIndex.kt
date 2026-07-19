@@ -1,8 +1,6 @@
 package com.github.raghavaindrakj.mediapipevision.storage
 
 import android.content.Context
-import com.github.raghavaindrakj.mediapipevision.matching.ScoredSample
-import com.github.raghavaindrakj.mediapipevision.matching.SimilarityIndex
 import com.github.raghavaindrakj.mediapipevision.model.LearnedIdSummary
 import io.objectbox.Box
 import io.objectbox.BoxStore

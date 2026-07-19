@@ -1,6 +1,7 @@
-package com.github.raghavaindrakj.mediapipevision.matching
+package com.github.raghavaindrakj.mediapipevision.ranking
 
 import com.github.raghavaindrakj.mediapipevision.model.Match
+import com.github.raghavaindrakj.mediapipevision.storage.ScoredSample
 
 // Purely mechanical: aggregate raw nearest-neighbor hits into one best score per id, ranked.
 // No confidence threshold or ambiguity judgment here — that decision belongs to the caller.
