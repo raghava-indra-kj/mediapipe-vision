@@ -32,7 +32,6 @@ internal class MediaPipeVectorizer private constructor(
     override suspend fun extract(bitmap: Bitmap): FloatArray = withContext(Dispatchers.Default) {
         mutex.withLock {
             // Guard against use after close.
-            // Guard against use after close.
             if (embedderReleased) {
                 throw VectorizerException(
                     message = "Vectorizer is closed",
@@ -47,7 +46,7 @@ internal class MediaPipeVectorizer private constructor(
             // Ensure an embedding was produced.
             val embedding = result ?: throw VectorizerException(
                 message = "Vectorizer returned no embedding",
-                errorCode = VectorizerErrorCodes.UNEXPECTED_DIMENSION
+                errorCode = VectorizerErrorCodes.EXTRACTION_FAILED
             )
 
             // Validate output dimensionality against the expected model output.
