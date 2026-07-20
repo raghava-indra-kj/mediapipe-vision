@@ -17,9 +17,6 @@ android {
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        testInstrumentationRunnerArguments["supabaseUrl"] = project.findProperty("supabaseUrl") as? String ?: ""
-        testInstrumentationRunnerArguments["supabaseKey"] = project.findProperty("supabaseKey") as? String ?: ""
-        testInstrumentationRunnerArguments["geminiApiKey"] = project.findProperty("geminiApiKey") as? String ?: ""
     }
 
     publishing {
@@ -53,7 +50,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.mediapipe.tasks.vision)
     implementation(libs.androidx.exifinterface)
-    implementation(libs.okhttp)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
