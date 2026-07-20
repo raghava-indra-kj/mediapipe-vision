@@ -6,4 +6,6 @@ object VectorizerErrorCodes {
     const val UNEXPECTED_DIMENSION = "vectorizer/unexpected-dimension"
 
     const val CLOSED = "vectorizer/closed"
+
+    const val EXTRACTION_FAILED = "vectorizer/extraction-failed"
 }

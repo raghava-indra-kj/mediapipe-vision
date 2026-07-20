@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.mediapipe.tasks.vision)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.okhttp)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
