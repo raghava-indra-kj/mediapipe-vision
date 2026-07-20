@@ -1,4 +1,0 @@
--keep class com.github.raghavaindrakj.mediapipevision.model.FeatureEntity { *; }
--keep class com.github.raghavaindrakj.mediapipevision.model.FeatureEntity_ { *; }
--keep class com.github.raghavaindrakj.mediapipevision.model.SubjectEntity { *; }
--keep class com.github.raghavaindrakj.mediapipevision.model.SubjectEntity_ { *; }

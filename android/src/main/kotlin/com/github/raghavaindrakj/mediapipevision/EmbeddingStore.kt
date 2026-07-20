@@ -4,16 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import com.github.raghavaindrakj.mediapipevision.exception.EmbeddingStoreErrorCodes
 import com.github.raghavaindrakj.mediapipevision.exception.EmbeddingStoreException
-import com.github.raghavaindrakj.mediapipevision.model.FeatureEntity
-import com.github.raghavaindrakj.mediapipevision.model.FeatureEntity_
 import com.github.raghavaindrakj.mediapipevision.model.Match
-import com.github.raghavaindrakj.mediapipevision.model.MyObjectBox
 import com.github.raghavaindrakj.mediapipevision.model.Subject
-import com.github.raghavaindrakj.mediapipevision.model.SubjectEntity
-import com.github.raghavaindrakj.mediapipevision.model.SubjectEntity_
-import io.objectbox.Box
-import io.objectbox.BoxStore
-import io.objectbox.exception.UniqueViolationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,14 +18,8 @@ class EmbeddingStore {
     /** Lifecycle states for the store. */
     private enum class State { UNINITIALIZED, READY, CLOSED }
 
-    /** ObjectBox store instance. */
-    private lateinit var boxStore: BoxStore
-
-    /** ObjectBox box for subject entities. */
-    private lateinit var subjectBox: Box<SubjectEntity>
-
-    /** ObjectBox box for feature entities. */
-    private lateinit var featureBox: Box<FeatureEntity>
+    /** SQLite-backed persistence and recognition. */
+    private lateinit var database: EmbeddingDatabase
 
     /** Embedding extractor for inference. */
     private lateinit var extractor: EmbeddingExtractor
@@ -50,9 +36,8 @@ class EmbeddingStore {
     /** Initializes the store and loads the embedder. */
     suspend fun initialize(context: Context) = lifecycleMutex.withLock {
         withContext(Dispatchers.IO) {
-            boxStore = MyObjectBox.builder().androidContext(context.applicationContext).build()
-            subjectBox = boxStore.boxFor(SubjectEntity::class.java)
-            featureBox = boxStore.boxFor(FeatureEntity::class.java)
+            database = EmbeddingDatabase()
+            database.initialize(context)
             extractor = EmbeddingExtractor.create(context)
             state = State.READY
         }
@@ -63,7 +48,7 @@ class EmbeddingStore {
         requireInitialized()
         withContext(Dispatchers.IO) {
             extractor.close()
-            boxStore.close()
+            database.close()
             state = State.CLOSED
         }
     }
@@ -75,75 +60,37 @@ class EmbeddingStore {
     /** Creates a new subject with the given ID and name. */
     suspend fun createSubject(subjectId: String, name: String) {
         requireInitialized()
-        withContext(Dispatchers.IO) {
-            try {
-                subjectBox.put(
-                    SubjectEntity(
-                        subjectId = subjectId, name = name, featureCount = 0, createdAt = System.currentTimeMillis()
-                    )
-                )
-            } catch (e: UniqueViolationException) {
-                throw EmbeddingStoreException(
-                    message = "Subject already exists: $subjectId",
-                    errorCode = EmbeddingStoreErrorCodes.SUBJECT_ALREADY_EXISTS,
-                    cause = e,
-                )
-            }
-        }
+        database.createSubject(subjectId, name)
     }
 
     /** Updates the name of an existing subject. */
     suspend fun updateSubject(subjectId: String, name: String) {
         requireInitialized()
-        withContext(Dispatchers.IO) {
-            boxStore.runInTx {
-                val subject = requireSubjectExists(subjectId)
-                subject.name = name
-                subjectBox.put(subject)
-            }
-        }
+        database.updateSubject(subjectId, name)
     }
 
     /** Deletes a subject and all its features. */
     suspend fun deleteSubject(subjectId: String) {
         requireInitialized()
-        withContext(Dispatchers.IO) {
-            boxStore.runInTx {
-                val subject = requireSubjectExists(subjectId)
-                // Remove all features for this subject
-                featureBox.query(FeatureEntity_.subjectId.equal(subjectId)).build().use { query ->
-                    featureBox.removeByIds(query.findIds().toMutableList())
-                }
-                subjectBox.remove(subject)
-            }
-        }
+        database.deleteSubject(subjectId)
     }
 
     /** Returns all subjects. */
     suspend fun listSubjects(): List<Subject> {
         requireInitialized()
-        return withContext(Dispatchers.IO) {
-            subjectBox.all.map { mapToSubject(it) }
-        }
+        return database.listSubjects()
     }
 
     /** Returns a single subject by its ID, or null if not found. */
     suspend fun getSubject(subjectId: String): Subject? {
         requireInitialized()
-        return withContext(Dispatchers.IO) {
-            subjectBox.query(SubjectEntity_.subjectId.equal(subjectId)).build().use { query ->
-                val entity = query.findFirst() ?: return@withContext null
-                mapToSubject(entity)
-            }
-        }
+        return database.getSubject(subjectId)
     }
 
     /** Returns the total number of subjects. */
     suspend fun countSubjects(): Int {
         requireInitialized()
-        return withContext(Dispatchers.IO) {
-            subjectBox.count().toInt()
-        }
+        return database.countSubjects()
     }
 
     //#endregion Subject CRUD
@@ -154,54 +101,20 @@ class EmbeddingStore {
     suspend fun createFeature(subjectId: String, image: Bitmap) {
         requireInitialized()
         val featureId = UUID.randomUUID().toString()
-        // Extract embedding from image
         val vector = extractor.extract(image)
-        withContext(Dispatchers.IO) {
-            boxStore.runInTx {
-                val subject = requireSubjectExists(subjectId)
-                featureBox.put(
-                    FeatureEntity(
-                        featureId = featureId,
-                        subjectId = subjectId,
-                        vector = vector,
-                        createdAt = System.currentTimeMillis()
-                    )
-                )
-                subject.featureCount++
-                subjectBox.put(subject)
-            }
-        }
+        database.createFeature(subjectId, featureId, vector)
     }
 
     /** Deletes a feature and decrements its subject's feature count. */
     suspend fun deleteFeature(featureId: String) {
         requireInitialized()
-        withContext(Dispatchers.IO) {
-            boxStore.runInTx {
-                // Find feature or throw
-                featureBox.query(FeatureEntity_.featureId.equal(featureId)).build().use { query ->
-                    val feature = query.findFirst() ?: throw EmbeddingStoreException(
-                        message = "Feature not found: $featureId",
-                        errorCode = EmbeddingStoreErrorCodes.FEATURE_NOT_FOUND,
-                    )
-                    val subjectId = feature.subjectId
-                    featureBox.remove(feature)
-                    // Update subject count
-                    val subject = requireSubjectExists(subjectId)
-                    subject.featureCount--
-                    subjectBox.put(subject)
-                }
-            }
-        }
+        database.deleteFeature(featureId)
     }
 
     /** Returns all feature IDs for the given subject. */
     suspend fun listFeatures(subjectId: String): List<String> {
         requireInitialized()
-        return withContext(Dispatchers.IO) {
-            requireSubjectExists(subjectId)
-            featureBox.query(FeatureEntity_.subjectId.equal(subjectId)).build().find().map { it.featureId }
-        }
+        return database.listFeatures(subjectId)
     }
 
     //#endregion Feature CRUD
@@ -211,23 +124,8 @@ class EmbeddingStore {
     /** Matches [image] against enrolled subjects and returns the top *k* results. */
     suspend fun recognize(image: Bitmap, k: Int): List<Match> {
         requireInitialized()
-        // Extract query vector
         val query = extractor.extract(image)
-        return withContext(Dispatchers.IO) {
-            // Run ANN search and map to matches
-            featureBox.query(FeatureEntity_.vector.nearestNeighbors(query, k)).build().use { annQuery ->
-                annQuery.findWithScores().mapNotNull { result ->
-                    val record = result.get()
-                    val subject = subjectBox.query(SubjectEntity_.subjectId.equal(record.subjectId)).build()
-                        .use { it.findFirst() } ?: return@mapNotNull null
-                    Match(
-                        subjectId = record.subjectId,
-                        name = subject.name,
-                        confidence = (1f - result.score.toFloat()) * 100f
-                    )
-                }
-            }
-        }
+        return database.recognize(query, k)
     }
 
     //#endregion Recognition
@@ -247,23 +145,6 @@ class EmbeddingStore {
                 errorCode = EmbeddingStoreErrorCodes.STORE_CLOSED,
             )
         }
-    }
-
-    private fun requireSubjectExists(subjectId: String): SubjectEntity {
-        return subjectBox.query(SubjectEntity_.subjectId.equal(subjectId)).build().findFirst()
-            ?: throw EmbeddingStoreException(
-                message = "Subject not found: $subjectId",
-                errorCode = EmbeddingStoreErrorCodes.SUBJECT_NOT_FOUND,
-            )
-    }
-
-    private fun mapToSubject(entity: SubjectEntity): Subject {
-        return Subject(
-            subjectId = entity.subjectId,
-            name = entity.name,
-            featureCount = entity.featureCount,
-            createdAt = entity.createdAt
-        )
     }
 
     //#endregion Helpers

@@ -1,8 +1,8 @@
 # mediapipe-vision
 
 On-device item enrollment and recognition for Android. Generates image embeddings with MediaPipe
-Tasks Vision (MobileNetV3-Large) and stores/matches them with ObjectBox's HNSW vector index —
-no server, no Python, no model training required.
+Tasks Vision (MobileNetV3-Large) and matches them with an on-device SQLite store — no server,
+no Python, no model training required, no native dependencies.
 
 ## Usage
 
@@ -28,6 +28,14 @@ Failures throw `EmbeddingStoreException` or `EmbeddingExtractorException` (both 
 `EmbeddingException`) with a machine-readable `errorCode` — see `EmbeddingStoreErrorCodes` and
 `EmbeddingExtractorErrorCodes`.
 
+## Storage
+
+`recognize()` is backed by plain framework SQLite (`android.database.sqlite`) — exact linear-scan
+cosine similarity, no native vector index, no third-party dependency. It works identically on
+every device and ABI, including 32-bit-only hardware. The tradeoff is that search cost grows
+linearly with the number of enrolled features — comfortably fast (low single-digit seconds) up to
+a few thousand enrolled features, but not intended for very large catalogs.
+
 ## Adding it to a project
 
 Add the JitPack repository and the dependency:
@@ -38,7 +46,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.raghava-indra-kj:mediapipe-vision:1.0.5")
+    implementation("com.github.raghava-indra-kj:mediapipe-vision:1.0.7")
 }
 ```
 

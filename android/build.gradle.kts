@@ -3,13 +3,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.objectbox)
     id("maven-publish")
 }
 
 group = "com.github.raghava-indra-kj"
-version = "1.0.5"
+version = "1.0.7"
 
 android {
     namespace = "com.github.raghavaindrakj.mediapipevision"
@@ -18,6 +16,7 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     publishing {
@@ -50,8 +49,11 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.mediapipe.tasks.vision)
-    implementation(libs.objectbox.android)
     implementation(libs.androidx.exifinterface)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
 
 publishing {
@@ -59,7 +61,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "com.github.raghava-indra-kj"
             artifactId = "mediapipe-vision"
-            version = "1.0.5"
+            version = "1.0.7"
             afterEvaluate { from(components["release"]) }
         }
     }
