@@ -1,27 +1,36 @@
 # mediapipe-vision
 
-On-device item learning and recognition for Android. Generates image embeddings with MediaPipe
+On-device item enrollment and recognition for Android. Generates image embeddings with MediaPipe
 Tasks Vision (MobileNetV3-Large) and stores/matches them with ObjectBox's HNSW vector index —
 no server, no Python, no model training required.
 
 ## Usage
 
 ```kotlin
-val vision = MediaPipeVision.initialize(context)
+val store = EmbeddingStore()
+store.initialize(context)
 
-vision.learn(bitmap, id = "item-123", displayName = "Blue Mug")
-val matches = vision.recognize(bitmap) // ranked by confidence, best first
+// Enroll a subject
+store.createSubject(subjectId = "item-123", name = "Blue Mug")
+store.createFeature(subjectId = "item-123", image = bitmap)
+
+// Recognize against everything enrolled so far
+val matches = store.recognize(image = queryBitmap, k = 5) // ranked by confidence, best first
+matches.forEach { println("${it.name}: ${it.confidence}%") }
+
+store.close()
 ```
+
+`initialize`, `close`, and every read/write method are `suspend fun`s — call them from a
+coroutine (e.g. `lifecycleScope.launch { ... }`).
+
+Failures throw `EmbeddingStoreException` or `EmbeddingExtractorException` (both subtypes of
+`EmbeddingException`) with a machine-readable `errorCode` — see `EmbeddingStoreErrorCodes` and
+`EmbeddingExtractorErrorCodes`.
 
 ## Adding it to a project
 
-**Same machine, as a sibling folder** — add a composite build in `settings.gradle.kts`:
-
-```kotlin
-includeBuild("../mediapipe-vision")
-```
-
-**From anywhere, via JitPack** — add the repository and dependency:
+Add the JitPack repository and the dependency:
 
 ```kotlin
 repositories {
@@ -29,7 +38,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.raghava-indra-kj:mediapipe-vision:1.0.0")
+    implementation("com.github.raghava-indra-kj:mediapipe-vision:1.0.5")
 }
 ```
 
