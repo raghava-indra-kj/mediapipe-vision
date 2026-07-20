@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.github.raghavaindrakj.mediapipevision.exception.EmbeddingStoreErrorCodes
-import com.github.raghavaindrakj.mediapipevision.exception.EmbeddingStoreException
+import com.github.raghavaindrakj.mediapipevision.domain.vectordb.VectorDbErrorCodes
+import com.github.raghavaindrakj.mediapipevision.domain.vectordb.VectorDbException
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,22 +25,19 @@ import java.util.UUID
  * as the hardest realistic case for the embedder to tell apart.
  */
 @RunWith(AndroidJUnit4::class)
-class EmbeddingStoreInstrumentedTest {
+class VisionApiInstrumentedTest {
 
-    private lateinit var store: EmbeddingStore
+    private lateinit var api: VisionApi
 
     @Before
     fun setUp() = runBlocking {
-        store = EmbeddingStore()
-        store.initialize(ApplicationProvider.getApplicationContext())
+        api = VisionApi.create(ApplicationProvider.getApplicationContext())
     }
 
     @After
     fun tearDown() = runBlocking {
-        // Each test method reopens the same on-disk store, so leftover subjects from a prior
-        // method (or a prior run) would otherwise contaminate recognize() results in later tests.
-        store.listSubjects().forEach { store.deleteSubject(it.subjectId) }
-        store.close()
+        api.listSubjects().forEach { api.deleteSubject(it.subjectId) }
+        api.close()
     }
 
     @Test
@@ -50,17 +47,17 @@ class EmbeddingStoreInstrumentedTest {
         val cyan = "cyan-${UUID.randomUUID()}"
         val aquamarine = "aquamarine-${UUID.randomUUID()}"
 
-        store.createSubject(teal, "Teal Mocktail")
-        store.createSubject(turquoise, "Turquoise Mocktail")
-        store.createSubject(cyan, "Cyan Mocktail")
-        store.createSubject(aquamarine, "Aquamarine Mocktail")
+        api.createSubject(teal, "Teal Mocktail")
+        api.createSubject(turquoise, "Turquoise Mocktail")
+        api.createSubject(cyan, "Cyan Mocktail")
+        api.createSubject(aquamarine, "Aquamarine Mocktail")
 
-        store.createFeature(teal, loadAsset("mocktail_teal.png"))
-        store.createFeature(turquoise, loadAsset("mocktail_turquoise.png"))
-        store.createFeature(cyan, loadAsset("mocktail_cyan.png"))
-        store.createFeature(aquamarine, loadAsset("mocktail_aquamarine.png"))
+        api.createFeature(teal, loadAsset("mocktail_teal.png"))
+        api.createFeature(turquoise, loadAsset("mocktail_turquoise.png"))
+        api.createFeature(cyan, loadAsset("mocktail_cyan.png"))
+        api.createFeature(aquamarine, loadAsset("mocktail_aquamarine.png"))
 
-        val results = store.recognize(loadAsset("mocktail_cyan.png"), k = 4)
+        val results = api.recognize(loadAsset("mocktail_cyan.png"), k = 4)
 
         assertEquals(4, results.size)
         assertEquals(cyan, results.first().subjectId)
@@ -75,51 +72,51 @@ class EmbeddingStoreInstrumentedTest {
     fun subjectAndFeatureCrud_roundTrips() = runBlocking {
         val subjectId = "crud-${UUID.randomUUID()}"
 
-        store.createSubject(subjectId, "Test Mocktail")
-        val created = store.getSubject(subjectId)
+        api.createSubject(subjectId, "Test Mocktail")
+        val created = api.getSubject(subjectId)
         assertEquals("Test Mocktail", created?.name)
         assertEquals(0, created?.featureCount)
 
-        store.createFeature(subjectId, loadAsset("mocktail_teal.png"))
-        assertEquals(1, store.getSubject(subjectId)?.featureCount)
+        api.createFeature(subjectId, loadAsset("mocktail_teal.png"))
+        assertEquals(1, api.getSubject(subjectId)?.featureCount)
 
-        val featureIds = store.listFeatures(subjectId)
+        val featureIds = api.listFeatures(subjectId)
         assertEquals(1, featureIds.size)
 
-        store.deleteFeature(featureIds.first())
-        assertEquals(0, store.getSubject(subjectId)?.featureCount)
+        api.deleteFeature(featureIds.first())
+        assertEquals(0, api.getSubject(subjectId)?.featureCount)
 
-        store.deleteSubject(subjectId)
-        assertNull(store.getSubject(subjectId))
+        api.deleteSubject(subjectId)
+        assertNull(api.getSubject(subjectId))
     }
 
     @Test
     fun createSubject_duplicateId_throwsSubjectAlreadyExists() = runBlocking {
         val subjectId = "dup-${UUID.randomUUID()}"
-        store.createSubject(subjectId, "First")
+        api.createSubject(subjectId, "First")
 
         try {
-            store.createSubject(subjectId, "Second")
-            fail("expected EmbeddingStoreException")
-        } catch (e: EmbeddingStoreException) {
-            assertEquals(EmbeddingStoreErrorCodes.SUBJECT_ALREADY_EXISTS, e.errorCode)
+            api.createSubject(subjectId, "Second")
+            fail("expected VectorDbException")
+        } catch (e: VectorDbException) {
+            assertEquals(VectorDbErrorCodes.SUBJECT_ALREADY_EXISTS, e.errorCode)
         }
     }
 
     @Test
     fun deleteSubject_removesSubjectAndItsFeatures() = runBlocking {
         val subjectId = "delete-${UUID.randomUUID()}"
-        store.createSubject(subjectId, "Disposable Mocktail")
-        store.createFeature(subjectId, loadAsset("mocktail_aquamarine.png"))
+        api.createSubject(subjectId, "Disposable Mocktail")
+        api.createFeature(subjectId, loadAsset("mocktail_aquamarine.png"))
 
-        store.deleteSubject(subjectId)
+        api.deleteSubject(subjectId)
 
-        assertNull(store.getSubject(subjectId))
+        assertNull(api.getSubject(subjectId))
         try {
-            store.listFeatures(subjectId)
-            fail("expected EmbeddingStoreException")
-        } catch (e: EmbeddingStoreException) {
-            assertEquals(EmbeddingStoreErrorCodes.SUBJECT_NOT_FOUND, e.errorCode)
+            api.listFeatures(subjectId)
+            fail("expected VectorDbException")
+        } catch (e: VectorDbException) {
+            assertEquals(VectorDbErrorCodes.SUBJECT_NOT_FOUND, e.errorCode)
         }
     }
 
@@ -129,12 +126,12 @@ class EmbeddingStoreInstrumentedTest {
         val subjectIds = mocktails.associateWith { "$it-${UUID.randomUUID()}" }
 
         mocktails.forEach { name ->
-            store.createSubject(subjectIds.getValue(name), name)
-            store.createFeature(subjectIds.getValue(name), loadAsset("mocktail_$name.png"))
+            api.createSubject(subjectIds.getValue(name), name)
+            api.createFeature(subjectIds.getValue(name), loadAsset("mocktail_$name.png"))
         }
 
         mocktails.forEach { queryName ->
-            val results = store.recognize(loadAsset("mocktail_$queryName.png"), k = mocktails.size)
+            val results = api.recognize(loadAsset("mocktail_$queryName.png"), k = mocktails.size)
             Log.i(TAG, "query=$queryName")
             results.forEach { match ->
                 val matchedName = subjectIds.entries.first { it.value == match.subjectId }.key

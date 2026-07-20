@@ -6,32 +6,31 @@ import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.raghavaindrakj.mediapipevision.infra.vectordb.sqlite.SqliteVectorDb
+import com.github.raghavaindrakj.mediapipevision.infra.vectorizer.mediapipe.MediaPipeVectorizer
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
 
 /**
- * Measures [EmbeddingDatabase.recognize] at realistic enrollment scale using genuinely
- * MediaPipe-extracted embeddings from the four real mocktail photos (not fabricated vectors),
- * replicated across many subjects/samples — there's no way to obtain thousands of distinct real
- * dish photos, so real embeddings reused at volume is the honest way to reach that scale.
+ * Measures recognition latency at realistic enrollment scale using real MediaPipe-extracted
+ * embeddings from the four mocktail photos, replicated across many subjects.
  */
 @RunWith(AndroidJUnit4::class)
-class EmbeddingDatabaseScaleBenchmarkTest {
+class SqliteVectorDbScaleBenchmarkTest {
 
     @Test
     fun recognize_at50Dishes100SamplesEach(): Unit = runBlocking {
         val dishCount = 50
         val samplesPerDish = 100
 
-        val extractor = EmbeddingExtractor.create(ApplicationProvider.getApplicationContext())
+        val vectorizer = MediaPipeVectorizer.create(ApplicationProvider.getApplicationContext())
         val realVectors = listOf("mocktail_teal.png", "mocktail_turquoise.png", "mocktail_cyan.png", "mocktail_aquamarine.png")
-            .map { extractor.extract(loadAsset(it)) }
-        extractor.close()
+            .map { vectorizer.extract(loadAsset(it)) }
+        vectorizer.close()
 
-        val database = EmbeddingDatabase()
-        database.initialize(ApplicationProvider.getApplicationContext())
+        val database = SqliteVectorDb.create(ApplicationProvider.getApplicationContext())
 
         try {
             val insertStart = System.nanoTime()
@@ -40,20 +39,19 @@ class EmbeddingDatabaseScaleBenchmarkTest {
                 database.createSubject(subjectId, "Dish $dishIndex")
                 repeat(samplesPerDish) { sampleIndex ->
                     val vector = realVectors[sampleIndex % realVectors.size]
-                    database.createFeature(subjectId, "feature-${UUID.randomUUID()}", vector)
+                    database.createFeature(subjectId, vector)
                 }
             }
             val insertMs = (System.nanoTime() - insertStart) / 1_000_000
             val totalFeatures = dishCount * samplesPerDish
             Log.i(TAG, "Enrolled $totalFeatures features ($dishCount dishes x $samplesPerDish samples) in ${insertMs}ms")
 
-            // Warm-up call so the first timed call isn't paying one-off cache/JIT costs.
             database.recognize(realVectors[0], k = 5)
 
             val timings = mutableListOf<Long>()
             repeat(5) { callIndex ->
                 val start = System.nanoTime()
-                val results = database.recognize(realVectors[2], k = 5) // query with the real "cyan" embedding
+                val results = database.recognize(realVectors[2], k = 5)
                 val elapsedMs = (System.nanoTime() - start) / 1_000_000
                 timings += elapsedMs
                 Log.i(TAG, "recognize() call #$callIndex: ${elapsedMs}ms, top confidence=${results.first().confidence}")
