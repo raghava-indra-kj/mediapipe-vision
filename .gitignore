@@ -21,3 +21,7 @@ local.properties
 # OS / editor noise
 .DS_Store
 *.log
+
+# Test credentials — never commit API keys
+test-creds.ps1
+run-integration-test.ps1
