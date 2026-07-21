@@ -8,6 +8,8 @@ import com.github.raghavaindrakj.mediapipevision.domain.vectordb.VectorDb
 import com.github.raghavaindrakj.mediapipevision.domain.vectorizer.Vectorizer
 import com.github.raghavaindrakj.mediapipevision.infra.vectordb.sqlite.SqliteVectorDb
 import com.github.raghavaindrakj.mediapipevision.infra.vectorizer.mediapipe.MediaPipeVectorizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Entry point that composes a [Vectorizer] and a [VectorDb] into a single API. */
 class VisionApi private constructor(
@@ -61,10 +63,10 @@ class VisionApi private constructor(
     }
 
     companion object {
-        /** Creates a VisionApi instance with optional custom providers. */
-        fun create(
+        /** Creates a VisionApi instance with optional custom providers. Loads the model and opens the database off the calling thread. */
+        suspend fun create(
             context: Context, vectorizer: Vectorizer? = null, database: VectorDb? = null
-        ): VisionApi {
+        ): VisionApi = withContext(Dispatchers.IO) {
             val resolvedVectorizer = vectorizer ?: MediaPipeVectorizer.create(context)
             val resolvedDatabase = try {
                 database ?: SqliteVectorDb.create(context)
@@ -73,7 +75,7 @@ class VisionApi private constructor(
                 if (vectorizer == null) resolvedVectorizer.close()
                 throw e
             }
-            return VisionApi(resolvedVectorizer, resolvedDatabase)
+            VisionApi(resolvedVectorizer, resolvedDatabase)
         }
     }
 }
